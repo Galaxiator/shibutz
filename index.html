@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>מערכת שיבוץ מפקדים - משותפת</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: system-ui, sans-serif; background-color: #f0f2f5; }
+        .drag-item { cursor: grab; transition: all 0.2s; }
+        .drag-item:active { cursor: grabbing; scale: 0.95; }
+        .drop-zone { min-height: 60px; transition: background 0.3s; border: 1px dashed #ccc; }
+        .drop-zone:hover { background: #edf2f7; }
+        .sync-status { position: fixed; bottom: 10px; left: 10px; font-size: 12px; }
+    </style>
+</head>
+<body class="p-4">
+
+    <script>
+        const API_URL = "https://script.google.com/macros/s/AKfycbxBPxQVbaXc9dfFp7oF9pMOTSTubJe7VgEfGNBJRbZaKwuTNp53nazEzvdv-hL03zIK/exec"; 
+    </script>
+
+    <div class="max-w-7xl mx-auto">
+        <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm mb-6">
+            <h1 class="text-2xl font-bold text-slate-800">ניהול שיבוץ פלוגתי - שיתופי</h1>
+            <div id="status" class="text-green-600 font-medium">מחובר ומסונכרן ✓</div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <div class="bg-white p-5 rounded-xl shadow-sm">
+                <h2 class="text-lg font-bold mb-4 border-b pb-2">1. הגדרת מחלקות (סד"כ)</h2>
+                <div class="space-y-3">
+                    <input id="unitName" type="text" placeholder="שם מחלקה (לדוג' מחלקה 1)" class="w-full border p-2 rounded">
+                    <input id="unitSize" type="number" placeholder="כמות לוחמים" class="w-full border p-2 rounded">
+                    <button onclick="addUnit()" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">הוסף מחלקה</button>
+                </div>
+                <div id="unitList" class="mt-4 space-y-2"></div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm">
+                <h2 class="text-lg font-bold mb-4 border-b pb-2">2. הגדרת משימה חדשה</h2>
+                <div class="space-y-3 text-sm">
+                    <input id="taskName" type="text" placeholder="שם המשימה (לדוג' ש"ג)" class="w-full border p-2 rounded text-base">
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-xs">שעת התחלה יומית</label>
+                            <input id="startTime" type="number" value="8" min="0" max="23" class="w-full border p-2 rounded">
+                        </div>
+                        <div>
+                            <label class="block text-xs">שעת סיום יומית</label>
+                            <input id="endTime" type="number" value="20" min="0" max="23" class="w-full border p-2 rounded">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs">מספר משמרות (לחלוקה שווה)</label>
+                        <input id="shiftCount" type="number" value="3" class="w-full border p-2 rounded">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs">סד"כ נדרש למשמרת</label>
+                        <input id="reqSize" type="number" value="2" class="w-full border p-2 rounded">
+                    </div>
+
+                    <button onclick="generateTask()" class="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700 font-bold">צור משימה ומשמרות</button>
+                </div>
+            </div>
+
+            <div class="bg-white p-5 rounded-xl shadow-sm border-2 border-blue-200">
+                <h2 class="text-lg font-bold mb-4">3. בנק סד"כ פנוי</h2>
+                <div id="unitBank" class="flex flex-wrap gap-2"></div>
+                <p class="text-xs text-gray-500 mt-4">* גרור מחלקה למשמרת כדי לשבץ</p>
+            </div>
+        </div>
+
+        <div class="mt-8 bg-white p-6 rounded-xl shadow-sm">
+            <h2 class="text-xl font-bold mb-6">לוח שיבוצים פעיל</h2>
+            <div id="scheduleBoard" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+        </div>
+    </div>
+
+    <script>
+        let db = { units: [], tasks: [], assignments: {} };
+
+        // סנכרון מול גוגל
+        async function saveData() {
+            document.getElementById('status').innerText = "שומר...";
+            await fetch(API_URL, {
+                method: 'POST',
+                body: JSON.stringify(db)
+            });
+            document.getElementById('status').innerText = "מסונכרן ✓";
+        }
+
+        async function loadData() {
+            try {
+                const res = await fetch(API_URL);
+                const data = await res.json();
+                if (data.units) {
+                    db = data;
+                    renderAll();
+                }
+            } catch(e) { console.log("טעינה ראשונית..."); }
+        }
+
+        // הוספת מחלקה
+        function addUnit() {
+            const name = document.getElementById('unitName').value;
+            const size = parseInt(document.getElementById('unitSize').value);
+            if (!name || !size) return;
+            db.units.push({ id: 'u' + Date.now(), name, size });
+            saveData();
+            renderAll();
+        }
+
+        // יצירת משימה עם משמרות
+        function generateTask() {
+            const name = document.getElementById('taskName').value;
+            const start = parseInt(document.getElementById('startTime').value);
+            const end = parseInt(document.getElementById('endTime').value);
+            const numShifts = parseInt(document.getElementById('shiftCount').value);
+            const req = parseInt(document.getElementById('reqSize').value);
+
+            if (!name) return;
+
+            let shifts = [];
+            let totalHours = end >= start ? end - start : (24 - start) + end;
+            let duration = totalHours / numShifts;
+
+            for (let i = 0; i < numShifts; i++) {
+                let sTime = (start + (i * duration)) % 24;
+                let eTime = (start + ((i + 1) * duration)) % 24;
+                shifts.push({
+                    id: 's' + Date.now() + i,
+                    timeLabel: `${Math.floor(sTime).toString().padStart(2,'0')}:00 - ${Math.floor(eTime).toString().padStart(2,'0')}:00`,
+                    req: req
+                });
+            }
+
+            db.tasks.push({ id: 't' + Date.now(), name, shifts });
+            saveData();
+            renderAll();
+        }
+
+        // רינדור התצוגה
+        function renderAll() {
+            // רנדור רשימת מחלקות
+            document.getElementById('unitList').innerHTML = db.units.map(u => `
+                <div class="flex justify-between bg-gray-50 p-2 rounded border text-sm">
+                    <span>${u.name} (סד"כ: ${u.size})</span>
+                    <button onclick="removeUnit('${u.id}')" class="text-red-500">מחק</button>
+                </div>
+            `).join('');
+
+            // רנדור בנק גרירה
+            document.getElementById('unitBank').innerHTML = db.units.map(u => `
+                <div draggable="true" ondragstart="drag(event, '${u.id}')" class="drag-item bg-blue-500 text-white px-3 py-1 rounded-full shadow-sm text-sm font-bold">
+                    ${u.name}
+                </div>
+            `).join('');
+
+            // רנדור לוח המשימות
+            document.getElementById('scheduleBoard').innerHTML = db.tasks.map(t => `
+                <div class="border rounded-xl p-4 bg-slate-50">
+                    <h3 class="font-bold text-lg mb-3 text-slate-700 border-b">${t.name}</h3>
+                    <div class="space-y-4">
+                        ${t.shifts.map(s => {
+                            const assigned = db.assignments[s.id] || [];
+                            const totalCurrent = assigned.reduce((sum, a) => sum + a.count, 0);
+                            return `
+                                <div class="bg-white p-3 rounded shadow-sm">
+                                    <div class="flex justify-between text-xs font-bold mb-2">
+                                        <span>${s.timeLabel}</span>
+                                        <span class="${totalCurrent >= s.req ? 'text-green-600' : 'text-red-500'}">
+                                            סד"כ: ${totalCurrent} / ${s.req}
+                                        </span>
+                                    </div>
+                                    <div ondrop="drop(event, '${s.id}')" ondragover="allowDrop(event)" class="drop-zone rounded p-2 flex flex-wrap gap-1">
+                                        ${assigned.map(a => `
+                                            <div class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded border border-green-200 flex items-center">
+                                                ${a.name} (${a.count})
+                                                <button onclick="unassign('${s.id}', '${a.unitId}')" class="mr-1 font-bold">×</button>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                    <button onclick="removeTask('${t.id}')" class="mt-4 text-xs text-gray-400 hover:text-red-500">מחק משימה</button>
+                </div>
+            `).join('');
+        }
+
+        // לוגיקת גרירה
+        function allowDrop(ev) { ev.preventDefault(); }
+        
+        function drag(ev, unitId) { ev.dataTransfer.setData("unitId", unitId); }
+
+        function drop(ev, shiftId) {
+            ev.preventDefault();
+            const unitId = ev.dataTransfer.getData("unitId");
+            const unit = db.units.find(u => u.id === unitId);
+            
+            if (!db.assignments[shiftId]) db.assignments[shiftId] = [];
+            
+            // בדיקה אם כבר שובץ
+            if (db.assignments[shiftId].find(a => a.unitId === unitId)) return;
+
+            const count = prompt(`כמה לוחמים מתוך ${unit.name} לשבץ?`, unit.size);
+            if (count && !isNaN(count)) {
+                db.assignments[shiftId].push({
+                    unitId: unitId,
+                    name: unit.name,
+                    count: parseInt(count)
+                });
+                saveData();
+                renderAll();
+            }
+        }
+
+        function unassign(shiftId, unitId) {
+            db.assignments[shiftId] = db.assignments[shiftId].filter(a => a.unitId !== unitId);
+            saveData();
+            renderAll();
+        }
+
+        function removeUnit(id) {
+            db.units = db.units.filter(u => u.id !== id);
+            saveData();
+            renderAll();
+        }
+
+        function removeTask(id) {
+            db.tasks = db.tasks.filter(t => t.id !== id);
+            saveData();
+            renderAll();
+        }
+
+        // טעינה אוטומטית כל 5 שניות לסנכרון בין מפקדים
+        setInterval(loadData, 5000);
+        loadData();
+
+    </script>
+</body>
+</html>
