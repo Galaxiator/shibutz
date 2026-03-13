@@ -1,206 +1,405 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARES Optimizer | תכנון סד"כ שבועי</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        body { background: #f8fafc; font-family: system-ui, -apple-system, sans-serif; }
-        .grid-container { display: grid; grid-template-columns: 350px 1fr; height: 100vh; }
-        .sidebar { background: white; border-left: 1px solid #e2e8f0; padding: 20px; overflow-y: auto; }
-        .content { padding: 30px; overflow-y: auto; }
-        .unit-card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; margin-bottom: 12px; transition: all 0.3s; }
-        .unit-card:hover { border-color: #3b82f6; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .day-column { min-width: 200px; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; min-height: 500px; }
-        .mission-block { background: #f1f5f9; border-right: 4px solid #64748b; padding: 10px; margin: 8px; border-radius: 4px; font-size: 13px; }
-        .load-bar { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; margin-top: 8px; }
-        .load-fill { height: 100%; background: #3b82f6; transition: width 0.5s; }
-        .type-tag { font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: bold; text-transform: uppercase; }
-        .type-black { background: #fee2e2; color: #991b1b; } /* משימות קשות/שחורות */
-        .type-qual { background: #dcfce7; color: #166534; } /* משימות איכות */
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Platoon Scheduler</title>
+
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+
+body{
+background:#050505;
+color:#00ff88;
+font-family:"JetBrains Mono", monospace;
+margin:0;
+}
+
+header{
+padding:15px 20px;
+border-bottom:1px solid #003322;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+h1{
+font-size:18px;
+letter-spacing:2px;
+}
+
+button{
+background:#001a11;
+border:1px solid #00ff88;
+color:#00ff88;
+padding:6px 10px;
+cursor:pointer;
+}
+
+button:hover{
+background:#00ff88;
+color:#000;
+}
+
+.panel{
+border:1px solid #003322;
+padding:12px;
+margin-bottom:12px;
+}
+
+input,select{
+background:#000;
+border:1px solid #003322;
+color:#00ff88;
+padding:4px;
+width:100%;
+}
+
+.grid{
+display:grid;
+grid-template-columns:300px 1fr;
+gap:15px;
+padding:15px;
+}
+
+.shift{
+border:1px solid #003322;
+margin-top:6px;
+padding:6px;
+}
+
+.assigned{
+background:#002b1a;
+margin:3px;
+padding:3px;
+display:flex;
+justify-content:space-between;
+}
+
+.warning{
+color:#ff5555;
+}
+
+</style>
 </head>
+
 <body>
 
-    <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbxBPxQVbaXc9dfFp7oF9pMOTSTubJe7VgEfGNBJRbZaKwuTNp53nazEzvdv-hL03zIK/exec";
-        let state = { units: [], missions: [], assignments: {} };
-    </script>
+<header>
+<h1>PLATOON OPS</h1>
+<div>
+<button onclick="exportCSV()">Export</button>
+<button onclick="autoAssign()">Auto Assign</button>
+</div>
+</header>
 
-    <div class="grid-container">
-        <div class="sidebar">
-            <h2 class="text-2xl font-black text-slate-800 mb-6 tracking-tight">ניהול כוח אדם</h2>
-            
-            <div class="bg-slate-50 p-4 rounded-xl mb-8">
-                <p class="text-xs font-bold text-slate-500 mb-3 uppercase">הוספת מחלקה למצבה</p>
-                <div class="space-y-2">
-                    <input id="uName" type="text" placeholder="שם (לדוג' מחלקה א')" class="w-full p-2 border rounded">
-                    <input id="uSize" type="number" placeholder="סדכ כולל" class="w-full p-2 border rounded">
-                    <button onclick="addUnit()" class="w-full bg-slate-800 text-white p-2 rounded font-bold text-sm">הוסף למערכת</button>
-                </div>
-            </div>
+<div class="grid">
 
-            <div id="unitAnalytics" class="space-y-4">
-                </div>
-        </div>
+<!-- LEFT PANEL -->
+<div>
 
-        <div class="content">
-            <header class="flex justify-between items-center mb-10">
-                <div>
-                    <h1 class="text-3xl font-black text-slate-900">לוח תכנון אופטימלי</h1>
-                    <p class="text-slate-500">תכנון שבועי - איזון עומסים והוגנות</p>
-                </div>
-                <div class="flex gap-3">
-                    <button onclick="sync(true)" class="bg-blue-600 text-white px-6 py-2 rounded-lg font-bold">שמור תכנון</button>
-                </div>
-            </header>
+<div class="panel">
 
-            <div class="bg-white p-6 rounded-xl border border-blue-100 shadow-sm mb-10">
-                <h3 class="font-bold text-slate-800 mb-4">הגדרת משימה חדשה</h3>
-                <div class="grid grid-cols-4 gap-4">
-                    <input id="mName" type="text" placeholder="שם המשימה" class="p-2 border rounded">
-                    <select id="mType" class="p-2 border rounded text-sm">
-                        <option value="qual">משימה איכותית / פעילות</option>
-                        <option value="black">משימה "שחורה" / תחזוקה</option>
-                    </select>
-                    <button onclick="createMission()" class="col-span-2 bg-slate-100 border border-slate-200 p-2 rounded font-bold">+ הוסף ללוח</button>
-                </div>
-            </div>
+<h3>Units</h3>
 
-            <div class="grid grid-cols-7 gap-4 overflow-x-auto pb-10">
-                ${['א','ב','ג','ד','ה','ו','ש'].map((day, i) => `
-                    <div class="day-column">
-                        <div class="p-3 border-b bg-slate-50 text-center font-bold text-slate-600">יום ${day}</div>
-                        <div id="day-${i}" class="min-h-[400px]" ondragover="event.preventDefault()" ondrop="dropToDay(event, ${i})">
-                            </div>
-                    </div>
-                `).join('')}
-            </div>
-        </div>
-    </div>
+<input id="unitName" placeholder="Unit name">
+<input id="unitSize" type="number" placeholder="Size">
 
-    <script>
-        async function sync(isPost = true) {
-            try {
-                if (isPost) {
-                    await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(state) });
-                } else {
-                    const res = await fetch(API_URL);
-                    const data = await res.json();
-                    if (data && data.units) state = data;
-                }
-                render();
-            } catch (e) { console.error("Sync Error"); }
-        }
+<button onclick="addUnit()">Add</button>
 
-        function addUnit() {
-            const name = document.getElementById('uName').value;
-            const size = parseInt(document.getElementById('uSize').value);
-            if (!name || !size) return;
-            state.units.push({ id: 'u'+Date.now(), name, size, stats: { blackHours: 0, qualHours: 0 } });
-            render();
-        }
+<div id="units"></div>
 
-        function createMission() {
-            const name = document.getElementById('mName').value;
-            const type = document.getElementById('mType').value;
-            if (!name) return;
-            state.missions.push({ id: 'm'+Date.now(), name, type, day: 0, shifts: [] });
-            render();
-        }
+</div>
 
-        function render() {
-            // 1. Reset Stats for recalculation
-            state.units.forEach(u => u.stats = { blackHours: 0, qualHours: 0, totalHours: 0 });
 
-            // 2. Render Sidebar (Fatigue & Fairness)
-            document.getElementById('unitAnalytics').innerHTML = state.units.map(u => {
-                // Calculate hours from assignments (placeholder logic)
-                Object.values(state.assignments).forEach(arr => {
-                    arr.forEach(a => {
-                        if(a.uId === u.id) {
-                            u.stats.totalHours += 4; // נניח 4 שעות למשמרת כרגע
-                        }
-                    });
-                });
-                
-                const loadPerc = Math.min(100, (u.stats.totalHours / 40) * 100); // 40 שעות כרף עומס
+<div class="panel">
 
-                return `
-                    <div class="unit-card bg-white">
-                        <div class="flex justify-between items-start mb-2">
-                            <h4 class="font-bold text-slate-800">${u.name}</h4>
-                            <span class="text-[10px] font-bold text-slate-400">סדכ: ${u.size}</span>
-                        </div>
-                        <div class="flex justify-between text-[10px] mb-1">
-                            <span>עומס שבועי מצטבר</span>
-                            <span>${u.stats.totalHours} שעות</span>
-                        </div>
-                        <div class="load-bar">
-                            <div class="load-fill" style="width: ${loadPerc}%"></div>
-                        </div>
-                        <div class="mt-3 flex gap-2">
-                            <div draggable="true" ondragstart="event.dataTransfer.setData('uId', '${u.id}')"
-                                 class="flex-1 text-center py-1 bg-blue-50 text-blue-600 text-[10px] font-bold rounded cursor-grab">גרור לשיבוץ</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
+<h3>Rules</h3>
 
-            // 3. Render Weekly Grid
-            for(let i=0; i<7; i++) {
-                const dayDiv = document.getElementById(`day-${i}`);
-                if (!dayDiv) continue;
-                
-                dayDiv.innerHTML = state.missions.filter(m => m.day == i).map(m => `
-                    <div class="mission-block relative group" ondragover="event.preventDefault()" ondrop="dropToMission(event, '${m.id}')">
-                        <div class="flex justify-between items-start mb-1">
-                            <span class="font-bold">${m.name}</span>
-                            <span class="type-tag ${m.type === 'black' ? 'type-black' : 'type-qual'}">${m.type === 'black' ? 'שחורה' : 'איכות'}</span>
-                        </div>
-                        <div class="text-[10px] text-slate-500 mb-2">שיבוץ נוכחי:</div>
-                        <div class="flex flex-wrap gap-1">
-                            ${(state.assignments[m.id] || []).map(a => `
-                                <span class="bg-white border px-1 rounded text-[9px] font-medium flex items-center">
-                                    ${state.units.find(u => u.id === a.uId)?.name} (${a.count})
-                                    <span class="mr-1 text-red-400 cursor-pointer" onclick="unassign('${m.id}','${a.uId}')">×</span>
-                                </span>
-                            `).join('')}
-                        </div>
-                        <div class="absolute -left-2 top-0 bottom-0 w-8 hidden group-hover:flex flex-col justify-center gap-1">
-                            <button onclick="moveMission('${m.id}', ${i-1})" class="bg-white shadow rounded p-1 text-[8px]">◀</button>
-                            <button onclick="moveMission('${m.id}', ${i+1})" class="bg-white shadow rounded p-1 text-[8px]">▶</button>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
+<label>Min rest hours</label>
+<input id="restRule" type="number" value="4">
 
-        // Logic Helpers
-        function moveMission(mId, newDay) {
-            if(newDay < 0 || newDay > 6) return;
-            state.missions.find(m => m.id === mId).day = newDay;
-            render();
-        }
+</div>
 
-        function dropToMission(ev, mId) {
-            ev.preventDefault();
-            const uId = ev.dataTransfer.getData('uId');
-            if(!uId) return;
-            const count = prompt("כמות לוחמים לשיבוץ:", 4);
-            if(!count) return;
-            if(!state.assignments[mId]) state.assignments[mId] = [];
-            state.assignments[mId].push({ uId, count: parseInt(count) });
-            render();
-        }
+</div>
 
-        function unassign(mId, uId) {
-            state.assignments[mId] = state.assignments[mId].filter(a => a.uId !== uId);
-            render();
-        }
 
-        sync(false);
-    </script>
+<!-- RIGHT PANEL -->
+<div>
+
+<div class="panel">
+
+<h3>Create Mission</h3>
+
+<input id="missionName" placeholder="Mission name">
+
+<label>Start (optional)</label>
+<input id="startTime" type="time">
+
+<label>Duration (hours)</label>
+<input id="duration" type="number" value="4">
+
+<label>Number of shifts</label>
+<input id="shiftCount" type="number" value="3">
+
+<button onclick="createMission()">Create</button>
+
+</div>
+
+<div id="missions"></div>
+
+</div>
+
+</div>
+
+<script>
+
+const API_URL="https://script.google.com/macros/s/AKfycbxBPxQVbaXc9dfFp7oF9pMOTSTubJe7VgEfGNBJRbZaKwuTNp53nazEzvdv-hL03zIK/exec"
+
+let state={
+units:[],
+missions:[],
+assignments:{}
+}
+
+function save(){
+localStorage.setItem("platoonState",JSON.stringify(state))
+syncCloud()
+render()
+}
+
+function load(){
+const s=localStorage.getItem("platoonState")
+if(s) state=JSON.parse(s)
+}
+
+async function syncCloud(){
+try{
+fetch(API_URL,{
+method:"POST",
+mode:"no-cors",
+body:JSON.stringify(state)
+})
+}catch(e){}
+}
+
+function addUnit(){
+
+const name=document.getElementById("unitName").value
+const size=parseInt(document.getElementById("unitSize").value)
+
+if(!name||!size) return
+
+state.units.push({
+id:"u"+Date.now(),
+name,
+size,
+last:0
+})
+
+document.getElementById("unitName").value=""
+document.getElementById("unitSize").value=""
+
+save()
+}
+
+function createMission(){
+
+const name=document.getElementById("missionName").value
+const start=document.getElementById("startTime").value
+const duration=parseInt(document.getElementById("duration").value)
+const count=parseInt(document.getElementById("shiftCount").value)
+
+if(!name) return
+
+let shifts=[]
+
+for(let i=0;i<count;i++){
+
+let label="Shift "+(i+1)
+
+if(start){
+
+let t=new Date("1970-01-01T"+start)
+
+t.setHours(t.getHours()+duration*i)
+
+let end=new Date(t)
+end.setHours(end.getHours()+duration)
+
+label=t.getHours().toString().padStart(2,'0')+
+":00-"+end.getHours().toString().padStart(2,'0')+":00"
+
+}
+
+shifts.push({
+id:"s"+Date.now()+i,
+label,
+req:2
+})
+
+}
+
+state.missions.push({
+id:"m"+Date.now(),
+name,
+shifts
+})
+
+save()
+}
+
+function assign(shiftId){
+
+const unitId=prompt("Unit ID")
+const count=parseInt(prompt("Count"))
+
+const unit=state.units.find(u=>u.id===unitId)
+
+if(!unit) return
+
+if(!state.assignments[shiftId])
+state.assignments[shiftId]=[]
+
+state.assignments[shiftId].push({
+unitId,
+count
+})
+
+save()
+
+}
+
+function autoAssign(){
+
+const rest=parseInt(document.getElementById("restRule").value)
+
+state.missions.forEach(m=>{
+m.shifts.forEach(s=>{
+
+if(!state.assignments[s.id])
+state.assignments[s.id]=[]
+
+let total=state.assignments[s.id].reduce((a,b)=>a+b.count,0)
+
+while(total<s.req){
+
+let unit=state.units.sort((a,b)=>a.last-b.last)[0]
+
+state.assignments[s.id].push({
+unitId:unit.id,
+count:1
+})
+
+unit.last=Date.now()
+
+total++
+
+}
+
+})
+})
+
+save()
+
+}
+
+function exportCSV(){
+
+let csv="Mission,Shift,Unit,Count\n"
+
+state.missions.forEach(m=>{
+m.shifts.forEach(s=>{
+let a=state.assignments[s.id]||[]
+
+a.forEach(x=>{
+let u=state.units.find(u=>u.id===x.unitId)
+
+csv+=`${m.name},${s.label},${u.name},${x.count}\n`
+})
+
+})
+})
+
+const blob=new Blob([csv])
+const link=document.createElement("a")
+
+link.href=URL.createObjectURL(blob)
+link.download="schedule.csv"
+link.click()
+
+}
+
+function render(){
+
+document.getElementById("units").innerHTML=
+state.units.map(u=>`
+<div>${u.name} (${u.size}) <small>${u.id}</small></div>
+`).join("")
+
+document.getElementById("missions").innerHTML=
+state.missions.map(m=>`
+
+<div class="panel">
+
+<h3>${m.name}</h3>
+
+${m.shifts.map(s=>{
+
+let assigned=state.assignments[s.id]||[]
+let total=assigned.reduce((a,b)=>a+b.count,0)
+
+return `
+
+<div class="shift">
+
+<div>${s.label} | required: 
+<input type="number" value="${s.req}" 
+onchange="sReq('${s.id}',this.value)">
+
+</div>
+
+<div>
+
+${assigned.map(a=>{
+let u=state.units.find(x=>x.id===a.unitId)
+
+return `<div class="assigned">${u.name} (${a.count})</div>`
+
+}).join("")}
+
+</div>
+
+<button onclick="assign('${s.id}')">Assign</button>
+
+</div>
+`
+
+}).join("")}
+
+</div>
+
+`).join("")
+
+}
+
+function sReq(id,val){
+
+state.missions.forEach(m=>{
+m.shifts.forEach(s=>{
+if(s.id===id) s.req=parseInt(val)
+})
+})
+
+save()
+}
+
+load()
+render()
+
+</script>
+
 </body>
 </html>
