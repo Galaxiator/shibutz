@@ -3,130 +3,92 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ARES C2 | PLATOON COMMAND DASHBOARD</title>
+    <title>ARES TACTICAL | C2 DASHBOARD</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Assistant:wght@300;400;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Assistant:wght@300;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --neon-green: #00ff41; --danger: #ff3e3e; --bg-black: #020202; --panel-bg: #0d0d0d; }
-        body { font-family: 'Assistant', sans-serif; background-color: var(--bg-black); color: #e0e0e0; overflow-x: hidden; }
+        :root { --neon: #00ff41; --dim: #004411; --bg: #050505; --panel: #0f0f0f; }
+        body { font-family: 'Assistant', sans-serif; background-color: var(--bg); color: #ccc; margin: 0; height: 100vh; overflow: hidden; }
         .mono { font-family: 'JetBrains Mono', monospace; }
-        .c2-panel { background: var(--panel-bg); border: 1px solid #1a1a1a; box-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-        .status-bar { height: 4px; border-radius: 2px; background: #1a1a1a; overflow: hidden; }
-        .timeline-grid { display: grid; grid-template-columns: 120px repeat(24, 1fr); gap: 1px; background: #1a1a1a; border: 1px solid #333; }
-        .time-slot { height: 50px; background: #080808; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #444; border-right: 1px solid #111; }
-        .mission-bar { position: absolute; height: 34px; background: rgba(0, 255, 65, 0.15); border-right: 3px solid var(--neon-green); top: 8px; border-radius: 2px; font-size: 11px; padding: 4px; overflow: hidden; white-space: nowrap; border-left: 1px solid rgba(0,255,65,0.3); }
-        .drop-zone.over { background: rgba(0, 255, 65, 0.05) !important; border: 1px dashed var(--neon-green); }
-        input { background: #000 !important; border: 1px solid #222 !important; color: var(--neon-green) !important; padding: 8px; border-radius: 4px; }
-        .stat-val { font-size: 2.5rem; font-weight: 800; line-height: 1; color: var(--neon-green); }
+        
+        /* Layout */
+        .grid-layout { display: grid; grid-template-columns: 350px 1fr; grid-template-rows: 100px 1fr; height: 100vh; }
+        .header { grid-column: 1 / 3; border-bottom: 1px solid #222; background: #000; }
+        .sidebar { border-left: 1px solid #222; background: var(--panel); overflow-y: auto; }
+        .main-content { overflow-y: auto; padding: 20px; position: relative; }
+
+        /* Tactical UI */
+        .stat-card { border-right: 3px solid var(--neon); background: #0a0a0a; padding: 10px 20px; }
+        .unit-card { background: #121212; border: 1px solid #222; transition: all 0.2s; }
+        .unit-card:hover { border-color: var(--neon); }
+        .btn-tactical { background: var(--neon); color: #000; font-weight: 900; text-transform: uppercase; padding: 8px 16px; font-size: 12px; cursor: pointer; }
+        
+        /* Timeline */
+        .timeline-wrapper { position: relative; border: 1px solid #222; background: #080808; margin-top: 20px; }
+        .time-header { display: grid; grid-template-columns: 150px repeat(24, 1fr); background: #111; border-bottom: 1px solid #333; }
+        .time-slot { height: 40px; border-right: 1px solid #222; display: flex; align-items: center; justify-content: center; font-size: 10px; color: #555; font-family: 'JetBrains Mono'; }
+        .mission-row { display: grid; grid-template-columns: 150px 1fr; border-bottom: 1px solid #222; min-height: 60px; position: relative; }
+        .mission-info { background: #0a0a0a; border-left: 1px solid #333; padding: 10px; font-weight: bold; font-size: 13px; color: var(--neon); }
+        .mission-track { position: relative; background: rgba(255,255,255,0.02); }
+        .mission-bar { position: absolute; top: 10px; height: 40px; background: rgba(0, 255, 65, 0.1); border: 1px solid var(--neon); border-radius: 2px; color: var(--neon); font-size: 11px; padding: 5px; cursor: pointer; overflow: hidden; }
+        
+        .drop-zone.over { background: rgba(0,255,65,0.05); }
+        input { background: #000 !important; border: 1px solid #333 !important; color: var(--neon) !important; font-family: 'JetBrains Mono'; outline: none; padding: 5px; }
     </style>
 </head>
-<body class="p-6">
+<body>
+
+    <div class="grid-layout">
+        <div class="header flex items-center justify-between px-8">
+            <div class="flex items-center gap-6">
+                <h1 class="text-3xl font-black italic tracking-tighter text-white">ARES <span class="text-[#00ff41]">C2</span></h1>
+                <div class="h-10 w-[1px] bg-gray-800"></div>
+                <div class="flex gap-8">
+                    <div class="stat-card"><p class="text-[9px] uppercase mono text-gray-500">סה"כ סד"כ</p><div id="statTotal" class="text-2xl font-bold mono">00</div></div>
+                    <div class="stat-card"><p class="text-[9px] uppercase mono text-gray-500">במשימה</p><div id="statActive" class="text-2xl font-bold mono text-blue-400">00</div></div>
+                    <div class="stat-card"><p class="text-[9px] uppercase mono text-gray-500">זמין כרגע</p><div id="statAvail" class="text-2xl font-bold mono text-white">00</div></div>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="sync(true)" class="border border-green-900 text-green-900 px-4 py-2 text-[10px] mono hover:border-green-500 hover:text-green-500 transition">PUSH_DATA</button>
+            </div>
+        </div>
+
+        <div class="sidebar p-4 space-y-6">
+            <div>
+                <h2 class="text-xs font-black uppercase tracking-widest text-gray-500 mb-4">// ניהול מצבה</h2>
+                <div class="flex flex-col gap-2 mb-4">
+                    <input id="uName" type="text" placeholder="שם מחלקה" class="text-sm">
+                    <input id="uSize" type="number" placeholder="סד"כ" class="text-sm">
+                    <button onclick="addUnit()" class="btn-tactical w-full">הוסף כוח</button>
+                </div>
+                <div id="unitContainer" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="bg-[#111] p-4 border border-gray-800 flex gap-4 items-end rounded">
+                <div class="flex-1"><label class="text-[10px] block mb-1 text-gray-600">שם משימה</label><input id="tName" type="text" class="w-full"></div>
+                <div><label class="text-[10px] block mb-1 text-gray-600">התחלה</label><input id="tStart" type="time" value="08:00"></div>
+                <div><label class="text-[10px] block mb-1 text-gray-600">משך (ש')</label><input id="tDur" type="number" value="4" class="w-16"></div>
+                <div><label class="text-[10px] block mb-1 text-gray-600">משמרות</label><input id="tCount" type="number" value="3" class="w-16"></div>
+                <button onclick="createTask()" class="btn-tactical px-8 h-[34px]">צור משימה</button>
+            </div>
+
+            <div class="timeline-wrapper">
+                <div id="timelineHeader" class="time-header">
+                    <div class="time-slot font-bold">משימה / שעה</div>
+                    </div>
+                <div id="timelineBody"></div>
+            </div>
+        </div>
+    </div>
 
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbxBPxQVbaXc9dfFp7oF9pMOTSTubJe7VgEfGNBJRbZaKwuTNp53nazEzvdv-hL03zIK/exec";
-    </script>
+        let state = { units: [], tasks: [], assignments: {} };
 
-    <div class="max-w-[1900px] mx-auto space-y-6">
-        
-        <header class="flex justify-between items-end border-b-2 border-green-900 pb-4">
-            <div>
-                <h1 class="text-5xl font-black tracking-tighter italic text-white uppercase">ARES <span class="text-green-500">C2 SYSTEM</span></h1>
-                <p class="mono text-green-900 text-sm">PLATOON OPERATIONAL COMMAND CENTER // LIVE_DATA_LINK</p>
-            </div>
-            
-            <div class="flex gap-12 text-left">
-                <div class="text-center">
-                    <p class="text-[10px] uppercase text-gray-500 mono">סה"כ סד"כ</p>
-                    <div id="totalForce" class="stat-val mono">00</div>
-                </div>
-                <div class="text-center">
-                    <p class="text-[10px] uppercase text-gray-500 mono">במשימה</p>
-                    <div id="activeForce" class="stat-val text-blue-500 mono">00</div>
-                </div>
-                <div class="text-center">
-                    <p class="text-[10px] uppercase text-gray-500 mono">זמין לשיבוץ</p>
-                    <div id="availForce" class="stat-val text-white mono">00</div>
-                </div>
-            </div>
-        </header>
-
-        <div class="grid grid-cols-12 gap-6">
-            
-            <div class="col-span-12 xl:col-span-3 space-y-4">
-                <div class="c2-panel p-5 rounded-lg border-t-4 border-green-500">
-                    <h2 class="text-lg font-bold mb-4 flex justify-between items-center">
-                        <span>ניהול יחידות</span>
-                        <button onclick="toggleModal('unitModal')" class="bg-green-600 text-black px-2 py-1 text-[10px] font-bold uppercase">Add Unit +</button>
-                    </h2>
-                    <div id="unitAnalytics" class="space-y-4 max-h-[70vh] overflow-y-auto pr-2 custom-scroll">
-                        </div>
-                </div>
-            </div>
-
-            <div class="col-span-12 xl:col-span-9 space-y-6">
-                
-                <div class="c2-panel p-4 flex gap-6 items-center flex-wrap">
-                    <div class="flex-1 min-w-[300px]">
-                        <input id="tName" type="text" class="w-full text-xl font-bold" placeholder="שם משימה חדשה...">
-                    </div>
-                    <div class="flex gap-4 items-center bg-black/40 p-2 rounded">
-                        <div class="flex flex-col">
-                            <label class="text-[9px] uppercase text-gray-500">שעת התחלה</label>
-                            <input id="tStart" type="time" value="08:00" class="text-sm">
-                        </div>
-                        <div class="flex flex-col">
-                            <label class="text-[9px] uppercase text-gray-500">משך (שעות)</label>
-                            <input id="tDuration" type="number" value="4" class="w-16 text-sm">
-                        </div>
-                        <div class="flex flex-col">
-                            <label class="text-[9px] uppercase text-gray-500">משמרות</label>
-                            <input id="tCount" type="number" value="3" class="w-16 text-sm">
-                        </div>
-                    </div>
-                    <button onclick="createTask()" class="bg-green-500 text-black px-10 py-3 font-black uppercase hover:bg-white transition">צור משימה בלו"ז</button>
-                </div>
-
-                <div class="c2-panel p-6 rounded-lg overflow-x-auto">
-                    <div class="flex justify-between items-center mb-6">
-                        <h2 class="text-2xl font-black uppercase tracking-widest text-green-500">// Timeline (Next 24 Hours)</h2>
-                        <div class="flex gap-4">
-                             <button onclick="sync(true)" class="text-[10px] mono border border-green-900 px-3 py-1 hover:bg-green-900/20">FORCE_SYNC</button>
-                        </div>
-                    </div>
-                    
-                    <div class="relative min-w-[1200px]">
-                        <div class="timeline-grid mb-2">
-                            <div class="h-10 flex items-center justify-center font-bold text-gray-600 border-r border-gray-800 uppercase text-[10px]">יחידה / זמן</div>
-                            ${Array.from({length: 24}).map((_, i) => `
-                                <div class="time-slot font-bold">${String(i).padStart(2,'0')}:00</div>
-                            `).join('')}
-                        </div>
-
-                        <div id="timelineContainer" class="space-y-1">
-                            </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="unitModal" class="fixed inset-0 bg-black/90 hidden flex items-center justify-center z-50">
-        <div class="c2-panel p-8 w-96">
-            <h3 class="text-xl font-bold mb-6 text-green-500 uppercase font-black tracking-widest">Register New Unit</h3>
-            <div class="space-y-4">
-                <input id="uName" type="text" placeholder="Unit Designation (e.g. Squad A)" class="w-full text-lg">
-                <input id="uSize" type="number" placeholder="Total Personnel Count" class="w-full text-lg">
-                <div class="flex gap-2">
-                    <button onclick="addUnit()" class="flex-1 bg-green-500 text-black font-bold py-3">ADD ASSET</button>
-                    <button onclick="toggleModal('unitModal')" class="bg-red-900 text-white px-4">X</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        let state = { units: [], tasks: [], assignments: {}, settings: { minRest: 4 } };
-
+        // Core Sync
         async function sync(isPost = true) {
             try {
                 if (isPost) {
@@ -137,106 +99,99 @@
                     if (data.units) state = data;
                 }
                 render();
-            } catch (e) { console.error("Link Lost"); }
+            } catch (e) { console.error("Link Error"); }
         }
 
+        // Logic
         function addUnit() {
             const name = document.getElementById('uName').value;
             const size = parseInt(document.getElementById('uSize').value);
             if (!name || !size) return;
             state.units.push({ id: 'u'+Date.now(), name, size });
-            toggleModal('unitModal');
             sync(true);
         }
 
         function createTask() {
             const name = document.getElementById('tName').value;
-            const startStr = document.getElementById('tStart').value;
-            const duration = parseInt(document.getElementById('tDuration').value);
+            const [h, m] = document.getElementById('tStart').value.split(':').map(Number);
+            const duration = parseInt(document.getElementById('tDur').value);
             const count = parseInt(document.getElementById('tCount').value);
             if (!name) return;
 
             let shifts = [];
-            let [h, m] = startStr.split(':').map(Number);
             for (let i = 0; i < count; i++) {
                 let sH = (h + (i * duration)) % 24;
-                let eH = (sH + duration) % 24;
-                shifts.push({
-                    id: 's' + Date.now() + i,
-                    label: `${sH.toString().padStart(2,'0')}:00 - ${eH.toString().padStart(2,'0')}:00`,
-                    req: 2,
-                    startHour: sH,
-                    duration: duration
-                });
+                shifts.push({ id: 's'+Date.now()+i, label: name, start: sH, dur: duration, req: 2 });
             }
             state.tasks.push({ id: 't'+Date.now(), name, shifts });
             sync(true);
         }
 
+        // Drag & Drop
+        function drag(ev, id) { ev.dataTransfer.setData("uid", id); }
+        function allowDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add('over'); }
+        function drop(ev, sid) {
+            ev.preventDefault();
+            ev.currentTarget.classList.remove('over');
+            const uid = ev.dataTransfer.getData("uid");
+            const unit = state.units.find(u => u.id === uid);
+            const count = prompt(`כמות מתוך ${unit.name} (זמין: ${unit.size}):`, 2);
+            if (count) {
+                if (!state.assignments[sid]) state.assignments[sid] = [];
+                state.assignments[sid].push({ uid, name: unit.name, count: parseInt(count) });
+                sync(true);
+            }
+        }
+
         function render() {
-            // Stats HUD
-            const total = state.units.reduce((sum, u) => sum + u.size, 0);
-            let inMission = 0;
-            Object.values(state.assignments).forEach(arr => arr.forEach(a => inMission += a.count));
-            
-            document.getElementById('totalForce').innerText = total.toString().padStart(2, '0');
-            document.getElementById('activeForce').innerText = inMission.toString().padStart(2, '0');
-            document.getElementById('availForce').innerText = (total - inMission).toString().padStart(2, '0');
+            // Render HUD
+            const total = state.units.reduce((s, u) => s + u.size, 0);
+            let active = 0;
+            Object.values(state.assignments).forEach(v => v.forEach(a => active += a.count));
+            document.getElementById('statTotal').innerText = total;
+            document.getElementById('statActive').innerText = active;
+            document.getElementById('statAvail').innerText = total - active;
 
-            // Unit Cards (Analytics)
-            document.getElementById('unitAnalytics').innerHTML = state.units.map(u => {
-                let assignedToMe = 0;
-                Object.values(state.assignments).forEach(arr => {
-                    arr.forEach(a => { if(a.unitId === u.id) assignedToMe += a.count; });
-                });
-                const avail = u.size - assignedToMe;
-                const perc = (avail / u.size) * 100;
-                
-                return `
-                    <div class="bg-[#111] p-4 border border-gray-800 rounded relative group">
-                        <div class="flex justify-between items-start mb-2">
-                            <span class="font-black text-xl uppercase">${u.name}</span>
-                            <span class="mono text-xs ${avail < 2 ? 'text-red-500' : 'text-green-500'}">${avail}/${u.size} פנוי</span>
-                        </div>
-                        <div class="status-bar mb-2">
-                            <div class="h-full bg-green-500" style="width: ${perc}%"></div>
-                        </div>
-                        <div draggable="true" ondragstart="drag(event, '${u.id}')" 
-                             class="bg-green-600 text-black text-center py-1 text-[10px] font-bold cursor-grab uppercase active:scale-95 transition">
-                             גרור לשיבוץ בלו"ז
-                        </div>
-                        <button onclick="removeUnit('${u.id}')" class="absolute top-2 left-2 text-[8px] text-gray-800 hover:text-red-500 opacity-0 group-hover:opacity-100">DEL</button>
+            // Render Sidebar Units
+            document.getElementById('unitContainer').innerHTML = state.units.map(u => `
+                <div class="unit-card p-3 rounded" draggable="true" ondragstart="drag(event, '${u.id}')">
+                    <div class="flex justify-between text-xs font-bold mb-1">
+                        <span class="text-white">${u.name}</span>
+                        <span class="text-gray-500">${u.size} לוחמים</span>
                     </div>
-                `;
-            }).join('');
+                    <div class="w-full h-1 bg-gray-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-green-500" style="width: 100%"></div>
+                    </div>
+                    <p class="text-[9px] mt-2 text-gray-600 mono uppercase italic text-left">Click & Drag to assign</p>
+                </div>
+            `).join('');
 
-            // Timeline Rows
-            document.getElementById('timelineContainer').innerHTML = state.tasks.map(t => `
-                <div class="timeline-grid border-b border-gray-900 group">
-                    <div class="bg-[#0a0a0a] p-3 text-xs font-bold text-gray-300 flex flex-col justify-center border-r border-gray-800">
-                        <span class="text-green-500 truncate">${t.name}</span>
-                        <button onclick="removeTask('${t.id}')" class="text-[8px] text-gray-700 hover:text-red-500 text-right uppercase mt-1">Remove</button>
+            // Render Timeline Hours (Fixed the leak!)
+            let hoursHtml = '<div class="time-slot font-bold">משימה / שעה</div>';
+            for(let i=0; i<24; i++) hoursHtml += `<div class="time-slot">${String(i).padStart(2,'0')}:00</div>`;
+            document.getElementById('timelineHeader').innerHTML = hoursHtml;
+
+            // Render Mission Rows
+            document.getElementById('timelineBody').innerHTML = state.tasks.map(t => `
+                <div class="mission-row">
+                    <div class="mission-info flex flex-col justify-center">
+                        <span>${t.name}</span>
+                        <button onclick="removeTask('${t.id}')" class="text-[8px] text-gray-600 hover:text-red-500 text-right">REMOVE</button>
                     </div>
-                    <div class="col-span-24 relative h-12 bg-black/20">
+                    <div class="mission-track">
                         ${t.shifts.map(s => {
                             const assigned = state.assignments[s.id] || [];
-                            const totalS = assigned.reduce((sum, a) => sum + a.count, 0);
-                            const width = (s.duration / 24) * 100;
-                            const left = (s.startHour / 24) * 100;
-                            const isUnder = totalS < s.req;
-
+                            const current = assigned.reduce((sum, a) => sum + a.count, 0);
+                            const left = (s.start / 24) * 100;
+                            const width = (s.dur / 24) * 100;
                             return `
-                                <div ondrop="drop(event, '${s.id}')" ondragover="allowDrop(event)" ondragleave="dragLeave(event)"
-                                     class="mission-bar drop-zone" 
-                                     style="width: ${width}%; left: ${left}%; ${isUnder ? 'background: rgba(255,0,0,0.1); border-right-color: var(--danger);' : ''}">
-                                    <div class="flex justify-between items-center h-full px-2">
-                                        <span class="mono text-[9px] font-bold">${totalS}/${s.req}</span>
-                                        <span class="text-[9px] truncate ml-2">${assigned.map(a => a.name).join(', ')}</span>
-                                        <div class="flex gap-1">
-                                            <input type="number" value="${s.req}" onchange="updateReq('${s.id}', this.value)" 
-                                                   class="w-6 h-4 text-[8px] bg-transparent border-none p-0 text-center">
-                                        </div>
+                                <div class="mission-bar drop-zone" ondrop="drop(event, '${s.id}')" ondragover="allowDrop(event)" 
+                                     style="left: ${left}%; width: ${width}%">
+                                    <div class="flex justify-between items-center text-[9px] font-bold">
+                                        <span>${current}/${s.req}</span>
+                                        <span class="truncate ml-1">${assigned.map(a => a.name).join(', ')}</span>
                                     </div>
+                                    <div class="absolute bottom-0 left-0 h-[2px] bg-green-500" style="width: ${Math.min(100, (current/s.req)*100)}%"></div>
                                 </div>
                             `;
                         }).join('')}
@@ -245,31 +200,9 @@
             `).join('');
         }
 
-        // --- Logic ---
-        function toggleModal(id) { document.getElementById(id).classList.toggle('hidden'); }
-        function drag(ev, unitId) { ev.dataTransfer.setData("unitId", unitId); }
-        function allowDrop(ev) { ev.preventDefault(); ev.currentTarget.classList.add('over'); }
-        function dragLeave(ev) { ev.currentTarget.classList.remove('over'); }
-
-        function drop(ev, shiftId) {
-            ev.preventDefault();
-            ev.currentTarget.classList.remove('over');
-            const unitId = ev.dataTransfer.getData("unitId");
-            const unit = state.units.find(u => u.id === unitId);
-            
-            const count = prompt(`כמות לשיבוץ מתוך ${unit.name} (מקסימום זמין כרגע במחלקה):`, 2);
-            if (count) {
-                if (!state.assignments[shiftId]) state.assignments[shiftId] = [];
-                state.assignments[shiftId].push({ unitId, name: unit.name, count: parseInt(count) });
-                sync(true);
-            }
-        }
-
-        function unassign(sId, uId) { state.assignments[sId] = state.assignments[sId].filter(a => a.unitId !== uId); sync(true); }
-        function updateReq(sId, val) { state.tasks.forEach(t => t.shifts.forEach(s => { if(s.id === sId) s.req = parseInt(val); })); sync(true); }
-        function removeUnit(id) { state.units = state.units.filter(u => u.id !== id); sync(true); }
         function removeTask(id) { state.tasks = state.tasks.filter(t => t.id !== id); sync(true); }
-
+        
+        // Init
         sync(false);
         setInterval(() => sync(false), 20000);
     </script>
