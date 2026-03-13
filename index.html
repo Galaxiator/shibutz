@@ -1,85 +1,111 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title>Platoon Scheduler</title>
+<title>חמ״ל שיבוץ פלוגתי</title>
 
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
 
 <style>
 
 body{
 background:#050505;
-color:#00ff88;
-font-family:"JetBrains Mono", monospace;
+color:#19ff8a;
+font-family:'Assistant',sans-serif;
 margin:0;
 }
 
 header{
-padding:15px 20px;
-border-bottom:1px solid #003322;
+padding:14px 20px;
+border-bottom:1px solid #033;
 display:flex;
 justify-content:space-between;
 align-items:center;
 }
 
 h1{
-font-size:18px;
-letter-spacing:2px;
+font-size:20px;
+margin:0;
+letter-spacing:1px;
 }
 
 button{
-background:#001a11;
-border:1px solid #00ff88;
-color:#00ff88;
-padding:6px 10px;
+background:#001a12;
+border:1px solid #19ff8a;
+color:#19ff8a;
+padding:6px 12px;
 cursor:pointer;
 }
 
 button:hover{
-background:#00ff88;
+background:#19ff8a;
 color:#000;
 }
 
+.container{
+padding:15px;
+}
+
 .panel{
-border:1px solid #003322;
-padding:12px;
-margin-bottom:12px;
+border:1px solid #033;
+padding:10px;
+margin-bottom:10px;
 }
 
 input,select{
 background:#000;
-border:1px solid #003322;
-color:#00ff88;
+border:1px solid #033;
+color:#19ff8a;
 padding:4px;
 width:100%;
 }
 
 .grid{
 display:grid;
-grid-template-columns:300px 1fr;
+grid-template-columns:260px 1fr;
 gap:15px;
-padding:15px;
+}
+
+.calendar{
+display:grid;
+grid-template-columns:120px repeat(7,1fr);
+border-top:1px solid #033;
+}
+
+.dayHeader{
+text-align:center;
+border-left:1px solid #033;
+padding:6px;
+font-weight:bold;
+}
+
+.timeCell{
+border-left:1px solid #033;
+border-bottom:1px solid #033;
+padding:5px;
+font-size:12px;
+}
+
+.dayCell{
+border-left:1px solid #033;
+border-bottom:1px solid #033;
+padding:4px;
+min-height:70px;
+}
+
+.mission{
+border:1px solid #19ff8a;
+margin:3px 0;
+padding:3px;
+font-size:12px;
 }
 
 .shift{
-border:1px solid #003322;
-margin-top:6px;
-padding:6px;
-}
-
-.assigned{
-background:#002b1a;
-margin:3px;
-padding:3px;
-display:flex;
-justify-content:space-between;
-}
-
-.warning{
-color:#ff5555;
+font-size:11px;
+margin-top:2px;
+border-top:1px dashed #033;
 }
 
 </style>
@@ -88,26 +114,35 @@ color:#ff5555;
 <body>
 
 <header>
-<h1>PLATOON OPS</h1>
+
+<h1>חמ״ל שיבוץ שבועי</h1>
+
 <div>
-<button onclick="exportCSV()">Export</button>
-<button onclick="autoAssign()">Auto Assign</button>
+
+<button onclick="exportCSV()">ייצוא</button>
+
 </div>
+
 </header>
+
+
+<div class="container">
 
 <div class="grid">
 
-<!-- LEFT PANEL -->
+<!-- LEFT CONTROL PANEL -->
+
 <div>
 
 <div class="panel">
 
-<h3>Units</h3>
+<h3>מחלקות</h3>
 
-<input id="unitName" placeholder="Unit name">
-<input id="unitSize" type="number" placeholder="Size">
+<input id="unitName" placeholder="שם מחלקה">
 
-<button onclick="addUnit()">Add</button>
+<input id="unitSize" type="number" placeholder="כמות">
+
+<button onclick="addUnit()">הוסף</button>
 
 <div id="units"></div>
 
@@ -116,47 +151,70 @@ color:#ff5555;
 
 <div class="panel">
 
-<h3>Rules</h3>
+<h3>חוקי מנוחה</h3>
 
-<label>Min rest hours</label>
+<label>שעות מנוחה מינימליות</label>
+
 <input id="restRule" type="number" value="4">
 
 </div>
 
-</div>
-
-
-<!-- RIGHT PANEL -->
-<div>
 
 <div class="panel">
 
-<h3>Create Mission</h3>
+<h3>משימה חדשה</h3>
 
-<input id="missionName" placeholder="Mission name">
+<input id="missionName" placeholder="שם משימה">
 
-<label>Start (optional)</label>
+<label>יום</label>
+
+<select id="missionDay">
+<option value="0">ראשון</option>
+<option value="1">שני</option>
+<option value="2">שלישי</option>
+<option value="3">רביעי</option>
+<option value="4">חמישי</option>
+<option value="5">שישי</option>
+<option value="6">שבת</option>
+</select>
+
+<label>שעת התחלה</label>
+
 <input id="startTime" type="time">
 
-<label>Duration (hours)</label>
+<label>משך משמרת (שעות)</label>
+
 <input id="duration" type="number" value="4">
 
-<label>Number of shifts</label>
+<label>מספר משמרות</label>
+
 <input id="shiftCount" type="number" value="3">
 
-<button onclick="createMission()">Create</button>
-
-</div>
-
-<div id="missions"></div>
+<button onclick="createMission()">צור</button>
 
 </div>
 
 </div>
+
+
+<!-- CALENDAR -->
+
+<div>
+
+<div class="calendar" id="calendar">
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
 
 <script>
 
-const API_URL="https://script.google.com/macros/s/AKfycbxBPxQVbaXc9dfFp7oF9pMOTSTubJe7VgEfGNBJRbZaKwuTNp53nazEzvdv-hL03zIK/exec"
+const days=["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"]
 
 let state={
 units:[],
@@ -165,60 +223,55 @@ assignments:{}
 }
 
 function save(){
-localStorage.setItem("platoonState",JSON.stringify(state))
-syncCloud()
+
+localStorage.setItem("opsState",JSON.stringify(state))
 render()
+
 }
 
 function load(){
-const s=localStorage.getItem("platoonState")
-if(s) state=JSON.parse(s)
-}
 
-async function syncCloud(){
-try{
-fetch(API_URL,{
-method:"POST",
-mode:"no-cors",
-body:JSON.stringify(state)
-})
-}catch(e){}
+let s=localStorage.getItem("opsState")
+
+if(s) state=JSON.parse(s)
+
 }
 
 function addUnit(){
 
-const name=document.getElementById("unitName").value
-const size=parseInt(document.getElementById("unitSize").value)
+let name=document.getElementById("unitName").value
+let size=parseInt(document.getElementById("unitSize").value)
 
-if(!name||!size) return
+if(!name||!size)return
 
 state.units.push({
 id:"u"+Date.now(),
 name,
-size,
-last:0
+size
 })
 
 document.getElementById("unitName").value=""
 document.getElementById("unitSize").value=""
 
 save()
+
 }
 
 function createMission(){
 
-const name=document.getElementById("missionName").value
-const start=document.getElementById("startTime").value
-const duration=parseInt(document.getElementById("duration").value)
-const count=parseInt(document.getElementById("shiftCount").value)
+let name=document.getElementById("missionName").value
+let day=parseInt(document.getElementById("missionDay").value)
+let start=document.getElementById("startTime").value
+let duration=parseInt(document.getElementById("duration").value)
+let count=parseInt(document.getElementById("shiftCount").value)
 
-if(!name) return
+if(!name)return
 
 let shifts=[]
 
 for(let i=0;i<count;i++){
 
-let label="Shift "+(i+1)
+let label=""
 
 if(start){
 
@@ -227,10 +280,15 @@ let t=new Date("1970-01-01T"+start)
 t.setHours(t.getHours()+duration*i)
 
 let end=new Date(t)
+
 end.setHours(end.getHours()+duration)
 
 label=t.getHours().toString().padStart(2,'0')+
 ":00-"+end.getHours().toString().padStart(2,'0')+":00"
+
+}else{
+
+label="משמרת "+(i+1)
 
 }
 
@@ -245,61 +303,8 @@ req:2
 state.missions.push({
 id:"m"+Date.now(),
 name,
+day,
 shifts
-})
-
-save()
-}
-
-function assign(shiftId){
-
-const unitId=prompt("Unit ID")
-const count=parseInt(prompt("Count"))
-
-const unit=state.units.find(u=>u.id===unitId)
-
-if(!unit) return
-
-if(!state.assignments[shiftId])
-state.assignments[shiftId]=[]
-
-state.assignments[shiftId].push({
-unitId,
-count
-})
-
-save()
-
-}
-
-function autoAssign(){
-
-const rest=parseInt(document.getElementById("restRule").value)
-
-state.missions.forEach(m=>{
-m.shifts.forEach(s=>{
-
-if(!state.assignments[s.id])
-state.assignments[s.id]=[]
-
-let total=state.assignments[s.id].reduce((a,b)=>a+b.count,0)
-
-while(total<s.req){
-
-let unit=state.units.sort((a,b)=>a.last-b.last)[0]
-
-state.assignments[s.id].push({
-unitId:unit.id,
-count:1
-})
-
-unit.last=Date.now()
-
-total++
-
-}
-
-})
 })
 
 save()
@@ -308,26 +313,20 @@ save()
 
 function exportCSV(){
 
-let csv="Mission,Shift,Unit,Count\n"
+let csv="יום,משימה,משמרת\n"
 
 state.missions.forEach(m=>{
 m.shifts.forEach(s=>{
-let a=state.assignments[s.id]||[]
-
-a.forEach(x=>{
-let u=state.units.find(u=>u.id===x.unitId)
-
-csv+=`${m.name},${s.label},${u.name},${x.count}\n`
-})
-
+csv+=`${days[m.day]},${m.name},${s.label}\n`
 })
 })
 
-const blob=new Blob([csv])
-const link=document.createElement("a")
+let blob=new Blob([csv])
+let link=document.createElement("a")
 
 link.href=URL.createObjectURL(blob)
 link.download="schedule.csv"
+
 link.click()
 
 }
@@ -335,65 +334,50 @@ link.click()
 function render(){
 
 document.getElementById("units").innerHTML=
-state.units.map(u=>`
-<div>${u.name} (${u.size}) <small>${u.id}</small></div>
-`).join("")
+state.units.map(u=>`<div>${u.name} (${u.size})</div>`).join("")
 
-document.getElementById("missions").innerHTML=
-state.missions.map(m=>`
+let cal=document.getElementById("calendar")
 
-<div class="panel">
+let html=""
 
-<h3>${m.name}</h3>
+html+="<div></div>"
 
-${m.shifts.map(s=>{
+days.forEach(d=>{
+html+=`<div class="dayHeader">${d}</div>`
+})
 
-let assigned=state.assignments[s.id]||[]
-let total=assigned.reduce((a,b)=>a+b.count,0)
+for(let r=0;r<1;r++){
 
-return `
+html+=`<div class="timeCell">משימות</div>`
 
-<div class="shift">
+for(let d=0;d<7;d++){
 
-<div>${s.label} | required: 
-<input type="number" value="${s.req}" 
-onchange="sReq('${s.id}',this.value)">
+let missions=state.missions.filter(m=>m.day==d)
 
-</div>
+html+=`<div class="dayCell">`
 
-<div>
+missions.forEach(m=>{
 
-${assigned.map(a=>{
-let u=state.units.find(x=>x.id===a.unitId)
+html+=`<div class="mission">${m.name}`
 
-return `<div class="assigned">${u.name} (${a.count})</div>`
+m.shifts.forEach(s=>{
 
-}).join("")}
+html+=`<div class="shift">${s.label} | דרוש ${s.req}</div>`
 
-</div>
+})
 
-<button onclick="assign('${s.id}')">Assign</button>
+html+="</div>"
 
-</div>
-`
+})
 
-}).join("")}
-
-</div>
-
-`).join("")
+html+="</div>"
 
 }
 
-function sReq(id,val){
+}
 
-state.missions.forEach(m=>{
-m.shifts.forEach(s=>{
-if(s.id===id) s.req=parseInt(val)
-})
-})
+cal.innerHTML=html
 
-save()
 }
 
 load()
@@ -403,4 +387,3 @@ render()
 
 </body>
 </html>
-
